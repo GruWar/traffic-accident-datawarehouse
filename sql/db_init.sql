@@ -1,0 +1,26 @@
+-- CREATE SCHEMA
+CREATE SCHEMA IF NOT EXISTS bronze;
+CREATE SCHEMA IF NOT EXISTS silver;
+CREATE SCHEMA IF NOT EXISTS gold;
+
+-- CREATE TABLES
+CREATE TABLE IF NOT EXISTS bronze.traffic_accident_brno_raw (
+    raw_id BIGSERIAL PRIMARY KEY,
+    payload JSONB,
+    source TEXT,
+    load_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS bronze.meteostat_raw (
+    raw_id BIGSERIAL PRIMARY KEY,
+    payload JSONB,
+    source TEXT,
+    load_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS bronze.osm_raw (
+    raw_id BIGSERIAL PRIMARY KEY,
+    payload JSONB,
+    source TEXT,
+    load_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
