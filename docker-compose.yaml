@@ -6,7 +6,7 @@ services:
   # PostgreSQL
   # -----------------------------
   postgres:
-    image: postgres:15
+    image: postgis/postgis:16-3.4
     container_name: postgres
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
