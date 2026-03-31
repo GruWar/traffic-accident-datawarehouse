@@ -32,8 +32,8 @@ CREATE TABLE IF NOT EXISTS bronze.osm_raw (
 -- silver tables
 CREATE TABLE IF NOT EXISTS silver.traffic_accident_clean (
     -- identification
-    accident_id BIGINT PRIMARY KEY,
-    raw_id BIGINT,
+    raw_id BIGINT PRIMARY KEY,
+    accident_id BIGINT,
 
     -- location
     country TEXT DEFAULT 'CZ',
@@ -131,7 +131,7 @@ CREATE TABLE IF NOT EXISTS gold.dim_weather (
     weather_category TEXT
 );
 
-CREATE TABLE IF NOT EXISTS gold.fact_accidents (
+CREATE TABLE IF NOT EXISTS gold.fact_traffic_accidents (
     accident_id BIGINT PRIMARY KEY,
 
     -- foreign keys
@@ -142,10 +142,17 @@ CREATE TABLE IF NOT EXISTS gold.fact_accidents (
 
     -- measures
     total_damage BIGINT,
-    alcohol BOOLEAN,
-    age SMALLINT,
 
     -- optional attributes
-    main_cause TEXT,
-    injury_severity TEXT
+    main_cause TEXT
+);
+
+CREATE TABLE IF NOT EXISTS gold.traffic_accident_person (
+    accident_person_id SERIAL PRIMARY KEY,
+    accident_id BIGINT,
+    sex TEXT,
+    age SMALLINT,
+    alcohol BOOLEAN,
+    injury_severity TEXT,
+    FOREIGN KEY (accident_id) REFERENCES gold.fact_traffic_accidents(accident_id)
 );

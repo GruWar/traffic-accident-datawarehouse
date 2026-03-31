@@ -5,7 +5,8 @@ import os
 import requests
 import logging
 import json
-from datetime import datetime, timedelta
+import datetime
+from datetime import timedelta
 import time
 
 load_dotenv()
