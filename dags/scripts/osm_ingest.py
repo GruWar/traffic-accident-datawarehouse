@@ -14,14 +14,12 @@ def download_json(url, city):
     save_folder = r"C:\sql\traffic-accident-datawarehouse\data"
     save_path = os.path.join(save_folder, f"osm_{city}_{timestamp}.geojson")
     query = """
-    [out:json];
-    area["name"="Brno"]->.searchArea;
-    (
-    way["highway"](area.searchArea);
-    );
-    out body;
-    >;
-    out skel qt;    
+        [out:json];
+        area["name"="Brno"]->.searchArea;
+        (
+        way["highway"](area.searchArea);
+        );
+        out body geom;   
     """
     try:
         response = requests.post(url, data=query)
@@ -56,4 +54,4 @@ def osm_ingest():
         if conn and cur:
             disconnect_from_db(conn, cur)
 
-osm_ingest()
+# osm_ingest()

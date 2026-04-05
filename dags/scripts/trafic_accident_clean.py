@@ -1,5 +1,3 @@
-from numpy import record
-
 from data_utils import connect_to_db, disconnect_from_db
 import logging
 from pyproj import Transformer
@@ -35,9 +33,9 @@ def traffic_accident_data_clean():
             # Clean data
             # Alcohol field is "ano" or "ne", we want to convert it to boolean
             val = record["payload"].get("alkohol")
-            if val == "ano":
+            if val == "Ano":
                 alcohol = True
-            elif val == "ne":
+            elif val == "Ne":
                 alcohol = False
             else:
                 alcohol = None
@@ -46,7 +44,23 @@ def traffic_accident_data_clean():
             lat, lon = transformer.transform(record["payload"]["x"], record["payload"]["y"])
 
             # date
-            dt = datetime.strptime(record["payload"]["datum"], "%m/%d/%Y %I:%M:%S %p")
+            date_part = datetime.strptime(
+                record["payload"]["datum"],
+                "%m/%d/%Y %I:%M:%S %p"
+            )
+
+            try:
+                cas = str(record["payload"].get("cas", "0000")).zfill(4)
+                hour = int(cas[:2])
+                minute = int(cas[2:])
+
+                if not (0 <= hour < 24 and 0 <= minute < 60):
+                    raise ValueError
+
+            except:
+                hour, minute = 0, 0
+
+            dt = date_part.replace(hour=hour, minute=minute, second=0)
 
             row = [
                 record["raw_id"],
@@ -62,6 +76,7 @@ def traffic_accident_data_clean():
                 record["payload"]["povetrnostni_podm"],
                 record["payload"]["viditelnost"],
                 record["payload"]["druh_vozidla"],
+                record["payload"]["osoba"],
                 record["payload"]["pohlavi"],
                 record["payload"]["vek"],
                 alcohol,
@@ -86,11 +101,12 @@ def traffic_accident_data_clean():
                 weather_condition,
                 visibility,
                 vehicle_type,
+                person_type,
                 sex,
                 age,
                 alcohol,
                 total_damage)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, COALESCE(%s, 'N/A'), %s, %s, %s);
             """, data)
         conn.commit()
     except Exception as e:

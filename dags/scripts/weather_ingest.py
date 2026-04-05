@@ -86,4 +86,4 @@ def meteostat_incremental(station_id):
 end_date = datetime.date.today() - timedelta(days=1)
 start_date = datetime.date(2010, 1, 1)
 
-meteostat_backfill(start_date,end_date,11723)
+# meteostat_backfill(start_date,end_date,11723)

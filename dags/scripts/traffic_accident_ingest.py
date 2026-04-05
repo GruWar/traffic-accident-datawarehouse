@@ -60,4 +60,4 @@ def traffic_accident_ingest():
         if conn and cur:
             disconnect_from_db(conn, cur)
 
-traffic_accident_ingest()
+# traffic_accident_ingest()

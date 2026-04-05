@@ -58,6 +58,7 @@ CREATE TABLE IF NOT EXISTS silver.traffic_accident_clean (
     vehicle_type TEXT,
 
     -- driver
+    person_type TEXT,
     sex TEXT,
     age SMALLINT,
     alcohol BOOLEAN,
@@ -68,7 +69,6 @@ CREATE TABLE IF NOT EXISTS silver.traffic_accident_clean (
 
 CREATE TABLE IF NOT EXISTS silver.weather_clean (
     -- location
-    city_id BIGINT NOT NULL,
     station_id BIGINT NOT NULL,
     date DATE NOT NULL,
     time TIME NOT NULL,
@@ -80,11 +80,12 @@ CREATE TABLE IF NOT EXISTS silver.weather_clean (
     wind_dir INT,
     wind_speed NUMERIC(5,2),
 
-    PRIMARY KEY (city_id, date, time)
+    PRIMARY KEY (station_id, date, time)
 );
 
 CREATE TABLE IF NOT EXISTS silver.osm_roads_clean (
     road_id SERIAL PRIMARY KEY,
+    name TEXT,
     road_type TEXT,
     is_intersection BOOLEAN,
     lanes SMALLINT,
