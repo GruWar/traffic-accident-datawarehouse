@@ -104,6 +104,7 @@ CREATE TABLE IF NOT EXISTS gold.dim_city (
 CREATE TABLE IF NOT EXISTS gold.dim_time (
     time_id SERIAL PRIMARY KEY,
     date DATE,
+    year INT,
     month INT,
     day INT,
     day_of_week INT,
