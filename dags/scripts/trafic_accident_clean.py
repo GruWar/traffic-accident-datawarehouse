@@ -1,20 +1,26 @@
 from data_utils import connect_to_db, disconnect_from_db
 import logging
-from pyproj import Transformer
 from datetime import datetime
 from psycopg2.extras import execute_batch
 
 logger = logging.getLogger(__name__)
 
-def get_db_data(table_name):
+def get_db_data(table_name, backfill=False):
     conn, cur = None, None
     try:
         conn, cur = connect_to_db()
         # Get data from db
-        cur.execute(f"""
-            SELECT raw_id, payload FROM bronze.{table_name};
-        """)
-        data = cur.fetchall()
+        if backfill:
+            cur.execute(f"""
+                SELECT raw_id, payload FROM bronze.{table_name}
+                ORDER BY raw_id DESC LIMIT 1;
+            """)
+            data = cur.fetchall()
+        else:
+            cur.execute(f"""
+                SELECT raw_id, payload FROM bronze.{table_name};
+            """)
+            data = cur.fetchall()
         return data
     except Exception as e:
         logger.error(f"Error connecting to database: {e}")
@@ -22,97 +28,87 @@ def get_db_data(table_name):
         if conn and cur:
             disconnect_from_db(conn, cur)
 
-def traffic_accident_data_clean():
-    conn, cur = None, None
-    data = []
+def traffic_accident_data_clean(backfill=False):
+    all_rows_to_insert = []
+    
     try:
-        transformer = Transformer.from_crs("EPSG:5514", "EPSG:4326")
-        # Get data
-        payload = get_db_data("traffic_accidents_raw")
-        for record in payload:
-            # Clean data
-            # Alcohol field is "ano" or "ne", we want to convert it to boolean
-            val = record["payload"].get("alkohol")
-            if val == "Ano":
-                alcohol = True
-            elif val == "Ne":
-                alcohol = False
-            else:
-                alcohol = None
+        # 1. Získání všech dat z bronze vrstvy
+        # payload_records bude seznam tuplů: [(raw_id1, dict1), (raw_id2, dict2), ...]
+        payload_records = get_db_data("traffic_accidents_raw")
+        
+        if not payload_records:
+            logger.info("No data found in bronze layer.")
+            return
+
+        for record in payload_records: 
+            raw_id = record['raw_id']
+            full_geojson = record['payload']
             
-            # lat and lon
-            lat, lon = transformer.transform(record["payload"]["x"], record["payload"]["y"])
+            # 2. Procházení jednotlivých nehod (features) uvnitř jednoho GeoJSONu
+            for feature in full_geojson.get('features', []):
+                props = feature.get('properties', {})
+                geom = feature.get('geometry', {})
+                coords = geom.get('coordinates', [None, None])
 
-            # date
-            date_part = datetime.strptime(
-                record["payload"]["datum"],
-                "%m/%d/%Y %I:%M:%S %p"
-            )
+                # Čištění hmotné škody
+                raw_damage = props.get('hmotna_skoda', '0')
+                property_damage = None
+                if isinstance(raw_damage, str):
+                    clean_damage = raw_damage.replace(' Kč', '').replace(' ', '')
+                    if clean_damage.isdigit():
+                        property_damage = int(clean_damage)
+                elif isinstance(raw_damage, (int, float)):
+                    property_damage = raw_damage
 
-            try:
-                cas = str(record["payload"].get("cas", "0000")).zfill(4)
-                hour = int(cas[:2])
-                minute = int(cas[2:])
+                # Zpracování data (přesunuto před definici row)
+                datum_str = props.get('datum')
+                formatted_date = None
+                if datum_str:
+                    try:
+                        formatted_date = datetime.fromisoformat(datum_str).strftime('%Y-%m-%d')
+                    except Exception:
+                        formatted_date = None
 
-                if not (0 <= hour < 24 and 0 <= minute < 60):
-                    raise ValueError
+                # 3. Sestavení finálního řádku pro Silver tabulku
+                row = (
+                    raw_id,
+                    coords[1],  # lat
+                    coords[0],  # lon
+                    formatted_date,
+                    props.get('pricina', '').strip() if props.get('pricina') else None,
+                    props.get('druh'),
+                    props.get('lehce_zraneno'),
+                    props.get('tezce_zraneno'),
+                    props.get('usmrceno'),
+                    property_damage
+                )
+                all_rows_to_insert.append(row)
 
-            except:
-                hour, minute = 0, 0
+        # 4. Hromadný insert do Silver vrstvy
+        if all_rows_to_insert:
+            conn, cur = connect_to_db()
+            execute_batch(cur, """
+                INSERT INTO silver.traffic_accident_clean (
+                    raw_id,
+                    lat,
+                    lon,
+                    date,
+                    cause, 
+                    collision_type,
+                    slightly_injured,
+                    severely_injured, 
+                    fatalities,
+                    total_damage
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (raw_id) DO NOTHING;
+            """, all_rows_to_insert)
+            conn.commit()
+            logger.info(f"Successfully cleaned and inserted {len(all_rows_to_insert)} records.")
 
-            dt = date_part.replace(hour=hour, minute=minute, second=0)
-
-            row = [
-                record["raw_id"],
-                record["payload"]["id_nehody"],
-                "Brno",
-                record["payload"]["katastr"],
-                lat,
-                lon,
-                dt,
-                record["payload"]["hlavni_pricina"],
-                record["payload"]["tezce_zran_os"],
-                record["payload"]["stav_vozovky"],
-                record["payload"]["povetrnostni_podm"],
-                record["payload"]["viditelnost"],
-                record["payload"]["druh_vozidla"],
-                record["payload"]["osoba"],
-                record["payload"]["pohlavi"],
-                record["payload"]["vek"],
-                alcohol,
-                record["payload"]["hmotna_skoda"]
-            ]
-            data.append(row)
-
-        # insert into db
-        conn, cur = connect_to_db()
-        execute_batch(cur, """
-            INSERT INTO silver.traffic_accident_clean (
-                raw_id,
-                accident_id,
-                city,
-                district,
-                lat,
-                lon,
-                accident_time,
-                main_cause,
-                injury_severity,
-                road_condition,
-                weather_condition,
-                visibility,
-                vehicle_type,
-                person_type,
-                sex,
-                age,
-                alcohol,
-                total_damage)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, COALESCE(%s, 'N/A'), %s, %s, %s);
-            """, data)
-        conn.commit()
     except Exception as e:
-        logger.error(f"Error while inserting: {e}")
+        logger.error(f"Error during cleaning process: {e}")
     finally:
-        if conn and cur:
+        if 'conn' in locals() and conn:
             disconnect_from_db(conn, cur)
 
 

@@ -33,35 +33,23 @@ CREATE TABLE IF NOT EXISTS bronze.osm_raw (
 CREATE TABLE IF NOT EXISTS silver.traffic_accident_clean (
     -- identification
     raw_id BIGINT PRIMARY KEY,
-    accident_id BIGINT,
 
     -- location
     country TEXT DEFAULT 'CZ',
-    city TEXT,
-    district TEXT,
     lat DOUBLE PRECISION,
     lon DOUBLE PRECISION,
 
     -- date
-    accident_time TIMESTAMP,
+    date TIMESTAMP,
 
     -- accident type
-    main_cause TEXT,
-    injury_severity TEXT,
+    cause TEXT,
+    collision_type TEXT,
 
-    -- conditions
-    road_condition TEXT,
-    weather_condition TEXT,
-    visibility TEXT,
-
-    -- vehicle
-    vehicle_type TEXT,
-
-    -- driver
-    person_type TEXT,
-    sex TEXT,
-    age SMALLINT,
-    alcohol BOOLEAN,
+    -- severity
+    slightly_injured INT,
+    severely_injured INT,
+    fatalities INT,
 
     -- aftermath
     total_damage BIGINT
@@ -123,14 +111,17 @@ CREATE TABLE IF NOT EXISTS gold.dim_road (
 
 CREATE TABLE IF NOT EXISTS gold.dim_weather (
     weather_id SERIAL PRIMARY KEY,
-
+    date DATE,
+    hour TIME,
     temp_c NUMERIC(5,2),
     precipitation_mm NUMERIC(6,2),
     snow INT,
     wind_dir INT,
     wind_speed NUMERIC(5,2),
 
-    weather_category TEXT
+    weather_category TEXT,
+
+    UNIQUE (date, hour)
 );
 
 CREATE TABLE IF NOT EXISTS gold.fact_traffic_accidents (
@@ -149,12 +140,7 @@ CREATE TABLE IF NOT EXISTS gold.fact_traffic_accidents (
     main_cause TEXT
 );
 
-CREATE TABLE IF NOT EXISTS gold.traffic_accident_person (
-    accident_person_id SERIAL PRIMARY KEY,
-    accident_id BIGINT,
-    sex TEXT,
-    age SMALLINT,
-    alcohol BOOLEAN,
-    injury_severity TEXT,
-    FOREIGN KEY (accident_id) REFERENCES gold.fact_traffic_accidents(accident_id)
-);
+-- Indexes
+CREATE INDEX IF NOT EXISTS idx_dim_city_name ON gold.dim_city (city_name);
+CREATE INDEX IF NOT EXISTS idx_dim_time_date ON gold.dim_time (date, hour);
+CREATE INDEX idx_osm_roads_geom ON silver.osm_roads_clean USING GIST (geom);
