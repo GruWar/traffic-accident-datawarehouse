@@ -32,10 +32,10 @@ CREATE TABLE IF NOT EXISTS bronze.osm_raw (
 -- silver tables
 CREATE TABLE IF NOT EXISTS silver.traffic_accident_clean (
     -- identification
-    raw_id BIGINT PRIMARY KEY,
+    accident_id SERIAL PRIMARY KEY,
+    raw_id BIGINT,
 
     -- location
-    country TEXT DEFAULT 'CZ',
     lat DOUBLE PRECISION,
     lon DOUBLE PRECISION,
 
@@ -59,7 +59,6 @@ CREATE TABLE IF NOT EXISTS silver.weather_clean (
     -- location
     station_id BIGINT NOT NULL,
     date DATE NOT NULL,
-    time TIME NOT NULL,
 
     -- temperatures
     temp_c NUMERIC(5,2),
@@ -68,7 +67,7 @@ CREATE TABLE IF NOT EXISTS silver.weather_clean (
     wind_dir INT,
     wind_speed NUMERIC(5,2),
 
-    PRIMARY KEY (station_id, date, time)
+    PRIMARY KEY (station_id, date)
 );
 
 CREATE TABLE IF NOT EXISTS silver.osm_roads_clean (
@@ -83,20 +82,21 @@ CREATE TABLE IF NOT EXISTS silver.osm_roads_clean (
 );
 
 -- gold tables
-
 CREATE TABLE IF NOT EXISTS gold.dim_city (
     city_id SERIAL PRIMARY KEY,
-    city_name TEXT UNIQUE
+    city_name TEXT UNIQUE,
+    region TEXT,
+    lat DOUBLE PRECISION,
+    lon DOUBLE PRECISION,
 );
 
-CREATE TABLE IF NOT EXISTS gold.dim_time (
-    time_id SERIAL PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS gold.dim_date (
+    date_id SERIAL PRIMARY KEY,
     date DATE,
     year INT,
     month INT,
     day INT,
-    day_of_week INT,
-    hour SMALLINT
+    day_of_week INT
 );
 
 
@@ -112,7 +112,6 @@ CREATE TABLE IF NOT EXISTS gold.dim_road (
 CREATE TABLE IF NOT EXISTS gold.dim_weather (
     weather_id SERIAL PRIMARY KEY,
     date DATE,
-    hour TIME,
     temp_c NUMERIC(5,2),
     precipitation_mm NUMERIC(6,2),
     snow INT,
@@ -121,7 +120,7 @@ CREATE TABLE IF NOT EXISTS gold.dim_weather (
 
     weather_category TEXT,
 
-    UNIQUE (date, hour)
+    UNIQUE (date)
 );
 
 CREATE TABLE IF NOT EXISTS gold.fact_traffic_accidents (
@@ -142,5 +141,5 @@ CREATE TABLE IF NOT EXISTS gold.fact_traffic_accidents (
 
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_dim_city_name ON gold.dim_city (city_name);
-CREATE INDEX IF NOT EXISTS idx_dim_time_date ON gold.dim_time (date, hour);
+CREATE INDEX IF NOT EXISTS idx_dim_date ON gold.dim_date (date);
 CREATE INDEX idx_osm_roads_geom ON silver.osm_roads_clean USING GIST (geom);

@@ -5,15 +5,15 @@ import logging
 
 logger = logging.getLogger(__name__)
  
-def backfill_traffic_accidents():
-    start_year = 2010
-    end_year = datetime.datetime.now().year - 1
-    for year in range(start_year, end_year + 1):
+def traffic_accident(backfill=False):
+    if backfill:
+        start_year = 2010
+        end_year = datetime.datetime.now().year - 1
+        for year in range(start_year, end_year + 1):
+            traffic_accident_ingest(f'nehody_{year}01-{year}12')
+    else:
+        year = datetime.datetime.now().year - 1
         traffic_accident_ingest(f'nehody_{year}01-{year}12')
-
-def traffic_accident():
-    year = datetime.datetime.now().year - 1
-    traffic_accident_ingest(f'nehody_{year}01-{year}12')
 
 def traffic_accident_ingest(data_file):
     conn, cur = None, None
@@ -36,6 +36,4 @@ def traffic_accident_ingest(data_file):
         if conn and cur:
             disconnect_from_db(conn, cur)
 
-
-# backfill_traffic_accidents()
-# traffic_accident()
+# traffic_accident(backfill=True)
