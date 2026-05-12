@@ -57,8 +57,9 @@ CREATE TABLE IF NOT EXISTS silver.traffic_accident_clean (
 
 CREATE TABLE IF NOT EXISTS silver.weather_clean (
     -- location
-    station_id BIGINT NOT NULL,
+    station_id TEXT NOT NULL,
     date DATE NOT NULL,
+    time TIME NOT NULL,
 
     -- temperatures
     temp_c NUMERIC(5,2),
@@ -67,7 +68,7 @@ CREATE TABLE IF NOT EXISTS silver.weather_clean (
     wind_dir INT,
     wind_speed NUMERIC(5,2),
 
-    PRIMARY KEY (station_id, date)
+    PRIMARY KEY (station_id, date, time)
 );
 
 CREATE TABLE IF NOT EXISTS silver.osm_roads_clean (

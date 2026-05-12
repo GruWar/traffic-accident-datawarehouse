@@ -13,7 +13,6 @@ def weather_data_clean(table_name):
              INSERT INTO silver.weather_clean (
                 station_id,
                 date,
-                time,
                 temp_c,
                 precipitation_mm,
                 snow,
@@ -23,17 +22,17 @@ def weather_data_clean(table_name):
             SELECT
                 substring(source FROM '(D?\\d+)$') AS station_id,
                 (payload::json ->> 'time')::timestamp::date AS date,
-                (payload::json ->> 'time')::timestamp::time AS time,
-                (payload::json ->> 'temp')::numeric AS temp_c,
-                (payload::json ->> 'prcp')::numeric AS precipitation_mm,
-                (payload::json ->> 'snow')::numeric AS snow,
-                (payload::json ->> 'wdir')::numeric AS wind_dir,
-                (payload::json ->> 'wspd')::numeric AS wind_speed
+                round(avg((payload::json ->> 'temp')::numeric), 2) AS temp_c,
+                round(avg((payload::json ->> 'prcp')::numeric), 2) AS precipitation_mm,
+                round(avg((payload::json ->> 'snow')::numeric), 2) AS snow,
+                round(avg((payload::json ->> 'wdir')::numeric), 2) AS wind_dir,
+                round(avg((payload::json ->> 'wspd')::numeric), 2) AS wind_speed
             FROM bronze.{table_name}
-            ON CONFLICT (station_id, date, time) DO NOTHING;
+            GROUP BY substring(source FROM '(D?\\d+)$'), (payload::json ->> 'time')::timestamp::date
+            ON CONFLICT (station_id, date) DO NOTHING;
         """)
         conn.commit()
-        logger.info(f"Successfully inserted data into silver.weather_clean")
+
     except Exception as e:
         logger.error(f"Error Inserting into database: {e}")
     finally:
