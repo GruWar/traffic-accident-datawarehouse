@@ -89,22 +89,22 @@ def osm_ingest(new_data=False):
         
         # ST_Read s parametry layer='lines' a INTERLEAVED_READING=YES
         query = f"""
-            CREATE OR REPLACE TEMP TABLE temp_roads AS 
-            SELECT 
-                osm_id, 
-                ST_AsWKB(geom) AS geom_wkb, 
-                to_json(all_tags) AS json_tags  -- Zde je ta změna
-            FROM st_read(
-                '{sql_pbf_path}', 
-                layer='lines', 
-                open_options=['INTERLEAVED_READING=YES']
-            )
-            WHERE highway IS NOT NULL;
-        """
+                    CREATE OR REPLACE TEMP TABLE temp_roads AS 
+                    SELECT 
+                        osm_id, 
+                        ST_AsWKB(geom) AS geom_wkb, 
+                        all_tags::TEXT AS hstore_text  -- Místo to_json() bereme čistý TEXT
+                    FROM st_read(
+                        '{sql_pbf_path}', 
+                        layer='lines', 
+                        open_options=['INTERLEAVED_READING=YES']
+                    )
+                    WHERE highway IS NOT NULL;
+                """
         ddb.execute(query)
         
         # Přenos do DataFrame
-        df = ddb.execute("SELECT osm_id, geom_wkb, json_tags FROM temp_roads").fetchdf()
+        df = ddb.execute("SELECT osm_id, geom_wkb, hstore_text FROM temp_roads").fetchdf()
         logger.info(f"Načteno {len(df)} řádků silnic. Zahajuji zápis do Postgresu...")
 
         # 3. ZÁPIS DO POSTGRESU (Bronze vrstva)
@@ -118,17 +118,17 @@ def osm_ingest(new_data=False):
         
         # Transformace dat pro psycopg2
         data_to_insert = [
-            (
-                int(row['osm_id']), 
-                row['geom_wkb'], 
-                row['json_tags']  # Toto už je díky to_json() validní JSON string
-            ) 
-            for _, row in df.iterrows()
-        ]
+                    (
+                        int(row['osm_id']), 
+                        row['geom_wkb'], 
+                        row['hstore_text']  # Použijeme textový řetězec s hstore strukturou
+                    ) 
+                    for _, row in df.iterrows()
+                ]
         
         # Nahrávání po dávkách
         execute_values(pg_cur, insert_query, data_to_insert, 
-                      template="(%s, ST_GeomFromWKB(%s), %s)",
+                      template="(%s, ST_GeomFromWKB(%s), %s::hstore)",
                       page_size=10000)
         
         pg_conn.commit()

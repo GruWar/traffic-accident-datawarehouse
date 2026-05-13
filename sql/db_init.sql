@@ -22,10 +22,12 @@ CREATE TABLE IF NOT EXISTS bronze.meteostat_raw (
     load_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE EXTENSION IF NOT EXISTS hstore;
+
 CREATE TABLE bronze.osm_ways (
     osm_id BIGINT PRIMARY KEY,         -- Originální OSM ID
     geom GEOMETRY(Geometry, 4326), -- Surová geometrie ve WGS84
-    tags JSONB,                        -- Všechny OSM tagy (highway, maxspeed, atd.)
+    tags HSTORE,                        -- Všechny OSM tagy (highway, maxspeed, atd.)
     nodes BIGINT[],                    -- Pole ID bodů (volitelné, pro integritu)
     ingested_at TIMESTAMP DEFAULT NOW()
 );
@@ -96,6 +98,7 @@ CREATE TABLE IF NOT EXISTS gold.dim_city (
     region TEXT,
     lat DOUBLE PRECISION,
     lon DOUBLE PRECISION,
+    station_id TEXT
 );
 
 CREATE TABLE IF NOT EXISTS gold.dim_date (

@@ -1,7 +1,5 @@
 from data_utils import connect_to_db, disconnect_from_db
-from psycopg2.extras import execute_batch
 import logging
-from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
