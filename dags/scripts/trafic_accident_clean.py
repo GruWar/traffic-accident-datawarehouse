@@ -86,7 +86,7 @@ def traffic_accident_data_clean(backfill=False):
                 )
                 all_rows_to_insert.append(row)
 
-        # --- ZÁPIS PROBÍHÁ AŽ TADY (MIMO CYKLUS ČTENÍ) ---
+
         if all_rows_to_insert:
             print(f"Připraveno {len(all_rows_to_insert)} řádků. Zahajuji zápis...")
             conn_write, cur_write = connect_to_db()

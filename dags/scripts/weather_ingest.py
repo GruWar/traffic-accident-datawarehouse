@@ -88,4 +88,4 @@ def fetch_and_store_weather_hourly(cur, station_id, start_date, end_date):
         print(f"  !! Error for {station_id}: {e}")
 
 if __name__ == "__main__":
-    weather_ingest(backfill=False)
+    weather_ingest(backfill=True)

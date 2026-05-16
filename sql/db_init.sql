@@ -122,26 +122,27 @@ CREATE TABLE IF NOT EXISTS gold.dim_road (
 
 CREATE TABLE IF NOT EXISTS gold.dim_weather (
     weather_id SERIAL PRIMARY KEY,
+    station_id TEXT NOT NULL,
     date DATE,
     temp_c NUMERIC(5,2),
     precipitation_mm NUMERIC(6,2),
-    snow INT,
+    snow NUMERIC(6,2),
     wind_dir INT,
     wind_speed NUMERIC(5,2),
 
     weather_category TEXT,
 
-    UNIQUE (date)
+    UNIQUE (station_id,date)
 );
 
 CREATE TABLE IF NOT EXISTS gold.fact_traffic_accidents (
     accident_id BIGINT PRIMARY KEY,
 
     -- foreign keys
-    city_id INT,
-    time_id INT,
-    road_id INT,
-    weather_id INT,
+    city_id INT REFERENCES gold.dim_city(city_id),
+    date_id INT REFERENCES gold.dim_date(date_id),
+    road_id INT REFERENCES gold.dim_road(road_id),
+    weather_id INT REFERENCES gold.dim_weather(weather_id),
 
     -- measures
     total_damage BIGINT,
@@ -153,4 +154,5 @@ CREATE TABLE IF NOT EXISTS gold.fact_traffic_accidents (
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_dim_city_name ON gold.dim_city (city_name);
 CREATE INDEX IF NOT EXISTS idx_dim_date ON gold.dim_date (date);
-CREATE INDEX idx_osm_roads_geom ON silver.osm_roads_clean USING GIST (geom);
+CREATE INDEX IF NOT EXISTS idx_osm_roads_geom 
+ON silver.osm_roads_clean USING gist (geom);
