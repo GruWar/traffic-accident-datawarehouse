@@ -1,5 +1,6 @@
 -- install extensions
 CREATE EXTENSION IF NOT EXISTS postgis;
+CREATE EXTENSION IF NOT EXISTS hstore;
 
 -- CREATE SCHEMA
 CREATE SCHEMA IF NOT EXISTS bronze;
@@ -22,8 +23,6 @@ CREATE TABLE IF NOT EXISTS bronze.meteostat_raw (
     load_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE EXTENSION IF NOT EXISTS hstore;
-
 CREATE TABLE bronze.osm_ways (
     osm_id BIGINT PRIMARY KEY,         -- Originální OSM ID
     geom GEOMETRY(Geometry, 4326), -- Surová geometrie ve WGS84
@@ -31,12 +30,6 @@ CREATE TABLE bronze.osm_ways (
     nodes BIGINT[],                    -- Pole ID bodů (volitelné, pro integritu)
     ingested_at TIMESTAMP DEFAULT NOW()
 );
-
--- GIN index na tagy je pro OSM nepostradatelný
-CREATE INDEX idx_osm_ways_tags ON bronze.osm_ways USING GIN (tags);
-
--- Prostorový index pro zrychlení Spatial Joinu v Silver vrstvě
-CREATE INDEX idx_osm_ways_geom ON bronze.osm_ways USING GIST (geom);
 
 -- silver tables
 CREATE TABLE IF NOT EXISTS silver.traffic_accident_clean (
@@ -110,7 +103,6 @@ CREATE TABLE IF NOT EXISTS gold.dim_date (
     day_of_week INT
 );
 
-
 CREATE TABLE IF NOT EXISTS gold.dim_road (
     road_id SERIAL PRIMARY KEY,
     road_type TEXT,
@@ -154,5 +146,7 @@ CREATE TABLE IF NOT EXISTS gold.fact_traffic_accidents (
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_dim_city_name ON gold.dim_city (city_name);
 CREATE INDEX IF NOT EXISTS idx_dim_date ON gold.dim_date (date);
+CREATE INDEX idx_osm_ways_tags ON bronze.osm_ways USING GIN (tags);
+CREATE INDEX idx_osm_ways_geom ON bronze.osm_ways USING GIST (geom);
 CREATE INDEX IF NOT EXISTS idx_osm_roads_geom 
 ON silver.osm_roads_clean USING gist (geom);

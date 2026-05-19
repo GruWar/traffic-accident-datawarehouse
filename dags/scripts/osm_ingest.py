@@ -2,8 +2,9 @@ import os
 import duckdb
 import logging
 import requests
-from data_utils import connect_to_db, disconnect_from_db
+from scripts.data_utils import connect_to_db, disconnect_from_db
 from psycopg2.extras import execute_values
+from airflow.decorators import task
 
 # Nastavení logování
 logging.basicConfig(level=logging.INFO)
@@ -48,6 +49,7 @@ def download_osm_data(url, target_folder, filename):
         logger.error(f"Chyba při stahování: {e}")
         return None
 
+@task
 def osm_ingest(new_data=False):
     pg_conn, pg_cur = None, None
     URL_ADDRESS = "https://download.geofabrik.de/europe/czech-republic-latest.osm.pbf"
@@ -143,6 +145,3 @@ def osm_ingest(new_data=False):
             disconnect_from_db(pg_conn, pg_cur)
         if 'ddb' in locals():
             ddb.close()
-
-if __name__ == "__main__":
-    osm_ingest(new_data=False)

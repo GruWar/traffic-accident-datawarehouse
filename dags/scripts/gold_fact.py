@@ -1,8 +1,10 @@
-from data_utils import connect_to_db, disconnect_from_db
+from scripts.data_utils import connect_to_db, disconnect_from_db
 import logging
+from airflow.decorators import task
 
 logger = logging.getLogger(__name__)
 
+@task
 def fact_traffic_accidents_load():
     conn, cur = None, None
     try:
@@ -60,6 +62,3 @@ def fact_traffic_accidents_load():
     finally:
         if conn and cur:
             disconnect_from_db(conn, cur)
-
-if __name__ == "__main__":
-    fact_traffic_accidents_load()

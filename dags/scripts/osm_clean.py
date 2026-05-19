@@ -1,8 +1,10 @@
-from data_utils import connect_to_db, disconnect_from_db
+from scripts.data_utils import connect_to_db, disconnect_from_db
 import logging
+from airflow.decorators import task
 
 logger = logging.getLogger(__name__)
 
+@task
 def osm_data_clean(table_name):
     conn, cur = None, None
     try:
@@ -55,5 +57,3 @@ def osm_data_clean(table_name):
     finally:
         if conn and cur:
             disconnect_from_db(conn, cur)
-
-osm_data_clean("osm_ways")

@@ -1,10 +1,14 @@
-from data_utils import connect_to_db, disconnect_from_db
+from scripts.data_utils import connect_to_db, disconnect_from_db
 import datetime
 import json
 import logging
-
+from airflow.decorators import task
 logger = logging.getLogger(__name__)
- 
+
+# Ingest traffic accident data into the database.
+# If backfill is True, it will ingest data from 2010 to the previous year.
+# Otherwise, it will ingest data from the previous year only.
+@task
 def traffic_accident(backfill=False):
     if backfill:
         start_year = 2010
@@ -35,5 +39,3 @@ def traffic_accident_ingest(data_file):
     finally:
         if conn and cur:
             disconnect_from_db(conn, cur)
-
-# traffic_accident(backfill=True)

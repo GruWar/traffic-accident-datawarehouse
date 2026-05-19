@@ -1,8 +1,10 @@
-from data_utils import connect_to_db, disconnect_from_db
+from scripts.data_utils import connect_to_db, disconnect_from_db
 import logging
+from airflow.decorators import task
 
 logger = logging.getLogger(__name__)
 
+@task
 def weather_data_clean(table_name):
     conn, cur = None, None
     try:
@@ -37,5 +39,3 @@ def weather_data_clean(table_name):
     finally:
         if conn and cur:
             disconnect_from_db(conn, cur)
-
-weather_data_clean("meteostat_raw")

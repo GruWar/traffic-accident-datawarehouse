@@ -4,9 +4,10 @@ import json
 import datetime
 from datetime import timedelta
 import time
-from data_utils import connect_to_db, disconnect_from_db
+from scripts.data_utils import connect_to_db, disconnect_from_db
 from psycopg2.extras import execute_batch
 from dotenv import load_dotenv
+from airflow.decorators import task
 
 load_dotenv()
 
@@ -16,6 +17,7 @@ def get_station_id(file):
     unique_stations = sorted(list({city['station_id'] for city in data}))
     return unique_stations
 
+@task
 def weather_ingest(backfill=False):
     station_ids = get_station_id("./data/cities.json")
     conn, cur = connect_to_db()
@@ -86,6 +88,3 @@ def fetch_and_store_weather_hourly(cur, station_id, start_date, end_date):
 
     except Exception as e:
         print(f"  !! Error for {station_id}: {e}")
-
-if __name__ == "__main__":
-    weather_ingest(backfill=True)

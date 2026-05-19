@@ -1,11 +1,13 @@
-from data_utils import connect_to_db, disconnect_from_db
+from scripts.data_utils import connect_to_db, disconnect_from_db
 import logging
 import json
 from psycopg2.extras import execute_values
 from datetime import datetime, timedelta
+from airflow.decorators import task
 
 logger = logging.getLogger(__name__)
 
+@task
 def city_dim_load():
     # Load json file
     with open('data/cities.json', 'r', encoding='utf-8') as f:
@@ -30,6 +32,7 @@ def city_dim_load():
         if conn and cur:
             disconnect_from_db(conn, cur)
 
+@task
 def generate_date_dim():
     start_date = datetime(2000, 1, 1)
     end_date = datetime(2030, 12, 31)
@@ -40,9 +43,9 @@ def generate_date_dim():
     while current_date <= end_date:
         data_to_insert.append((
             current_date,
-            current_date.day,
-            current_date.month,
             current_date.year,
+            current_date.month,
+            current_date.day,
             current_date.isoweekday()
         ))
         current_date += timedelta(days=1)
@@ -64,6 +67,7 @@ def generate_date_dim():
     finally:
         disconnect_from_db(conn, cur)
 
+@task
 def road_dim_load(table_name):
     conn, cur = None, None
     try:
@@ -94,6 +98,7 @@ def road_dim_load(table_name):
         if conn and cur:
             disconnect_from_db(conn, cur)
 
+@task
 def weather_dim_load(table_name):
     conn, cur = None, None
     try:
@@ -136,6 +141,3 @@ def weather_dim_load(table_name):
     finally:
         if conn and cur:
             disconnect_from_db(conn, cur)
-
-if __name__ == "__main__":
-    weather_dim_load("weather_clean")

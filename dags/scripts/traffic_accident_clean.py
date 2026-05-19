@@ -1,30 +1,34 @@
-from data_utils import connect_to_db, disconnect_from_db
+from scripts.data_utils import connect_to_db, disconnect_from_db
 import logging
 from datetime import datetime
 from psycopg2.extras import execute_batch
+from airflow.decorators import task
 
 logger = logging.getLogger(__name__)
 
+# Fetch data from the database for cleaning.
 def get_db_data(cur, table_name, backfill=False):
     try:
         if backfill:
             query = f"SELECT raw_id, payload FROM bronze.{table_name}"
         else:
             query = f"SELECT raw_id, payload FROM bronze.{table_name} ORDER BY raw_id DESC LIMIT 1"
-        
         cur.execute(query)
+        logger.info(f"Data fetched successfully from {table_name}.")
         return cur
     except Exception as e:
         logger.error(f"Error fetching data: {e}")
         return None
 
+# Clean traffic accident data and insert into the clean table.
+@task
 def traffic_accident_data_clean(backfill=False):
     all_rows_to_insert = []
-    conn_read, cur_read = None, None
+    conn, cur = None, None
     
     try:
-        conn_read, cur_read = connect_to_db()
-        records_stream = get_db_data(cur_read, "traffic_accidents_raw", backfill)
+        conn, cur = connect_to_db()
+        records_stream = get_db_data(cur, "traffic_accidents_raw", backfill)
 
         if not records_stream:
             return
@@ -38,7 +42,6 @@ def traffic_accident_data_clean(backfill=False):
                 raw_id = record[0]
                 payload = record[1]
 
-            # Ošetření listu v payloadu
             if isinstance(payload, list) and len(payload) > 0:
                 full_geojson = payload[0]
             else:
@@ -47,7 +50,7 @@ def traffic_accident_data_clean(backfill=False):
             if not isinstance(full_geojson, dict):
                 continue
 
-            # OPRAVA CYKLU: feature.get('features')
+            # REPAIR : feature.get('features')
             features = full_geojson.get('features', [])
             
             for feature in features:
@@ -86,9 +89,9 @@ def traffic_accident_data_clean(backfill=False):
                 )
                 all_rows_to_insert.append(row)
 
-
+        # Insert cleaned data into Silver layer
         if all_rows_to_insert:
-            print(f"Připraveno {len(all_rows_to_insert)} řádků. Zahajuji zápis...")
+            print(f"Prepared {len(all_rows_to_insert)} rows. Initiating write...")
             conn_write, cur_write = connect_to_db()
             try:
                 execute_batch(cur_write, """
@@ -99,16 +102,14 @@ def traffic_accident_data_clean(backfill=False):
                     ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """, all_rows_to_insert, page_size=5000)
                 conn_write.commit()
-                print("Data úspěšně uložena do Silver vrstvy.")
+                print("Data successfully saved to Silver layer.")
             finally:
                 disconnect_from_db(conn_write, cur_write)
         else:
-            print("Žádná data k uložení nenalezena.")
+            print("No data found for saving.")
 
     except Exception as e:
         logger.error(f"Error during cleaning process: {e}")
     finally:
-        if conn_read:
-            disconnect_from_db(conn_read, cur_read)
-
-traffic_accident_data_clean(backfill=True)
+        if conn:
+            disconnect_from_db(conn, cur)
