@@ -23,6 +23,7 @@ def city_dim_load():
         insert_query = """
             INSERT INTO gold.dim_city (city_name, region, lat, lon, station_id)
             VALUES %s
+            ON CONFLICT (city_name) DO NOTHING;
         """
         execute_values(cur, insert_query, data_to_insert)
         conn.commit()
@@ -57,6 +58,7 @@ def generate_date_dim():
         insert_query = """
             INSERT INTO gold.dim_date (date, year, month, day, day_of_week)
             VALUES %s
+            ON CONFLICT (date) DO NOTHING;
         """
         execute_values(cur, insert_query, data_to_insert)
         conn.commit()
@@ -89,6 +91,7 @@ def road_dim_load(table_name):
             max_speed,
             oneway
             FROM silver.{table_name}
+        ON CONFLICT (road_id) DO NOTHING;
         """)
         conn.commit()
         logger.info(f"Successfully inserted data into gold.dim_road")

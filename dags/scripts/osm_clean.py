@@ -49,6 +49,7 @@ def osm_data_clean(table_name):
                 END AS oneway,
                 geom
             FROM bronze.{table_name}
+            ON CONFLICT (road_id) DO NOTHING;
         """)
         conn.commit()
         logger.info(f"Successfully inserted data into silver.osm_roads_clean")

@@ -53,7 +53,8 @@ def fact_traffic_accidents_load():
 
         -- weather
         LEFT JOIN gold.dim_weather AS w
-        ON ta.date = w.date AND c.station_id = w.station_id;
+        ON ta.date = w.date AND c.station_id = w.station_id
+        ON CONFLICT (accident_id) DO NOTHING;
         """)
         conn.commit()
         logger.info(f"Successfully inserted data into gold.dim_weather")

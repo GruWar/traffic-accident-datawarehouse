@@ -40,8 +40,9 @@ def weather_ingest(backfill=False):
                     conn.commit()
                     current = batch_end + timedelta(days=1)
             else:
-                yesterday = datetime.date.today() - timedelta(days=1)
-                fetch_and_store_weather_hourly(cur, station_id, yesterday, yesterday)
+                start_date = datetime.date(datetime.datetime.now().year - 1, 1, 1)
+                end_date = datetime.date(datetime.datetime.now().year - 1, 12, 31)
+                fetch_and_store_weather_hourly(cur, station_id, start_date, end_date)
                 conn.commit()
                 
     finally:

@@ -92,19 +92,27 @@ def traffic_accident_data_clean(backfill=False):
         # Insert cleaned data into Silver layer
         if all_rows_to_insert:
             print(f"Prepared {len(all_rows_to_insert)} rows. Initiating write...")
-            conn_write, cur_write = connect_to_db()
+            conn_write, cur = connect_to_db()
             try:
-                execute_batch(cur_write, """
+                cur.execute("TRUNCATE TABLE silver.traffic_accident_clean;")
+                execute_batch(cur, """
                     INSERT INTO silver.traffic_accident_clean (
-                        raw_id, lat, lon, date, cause, 
-                        collision_type, slightly_injured, severely_injured, 
-                        fatalities, total_damage
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        raw_id,
+                        lat,
+                        lon,
+                        date,
+                        cause, 
+                        collision_type,
+                        slightly_injured,
+                        severely_injured, 
+                        fatalities,
+                        total_damage
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
                 """, all_rows_to_insert, page_size=5000)
                 conn_write.commit()
                 print("Data successfully saved to Silver layer.")
             finally:
-                disconnect_from_db(conn_write, cur_write)
+                disconnect_from_db(conn_write, cur)
         else:
             print("No data found for saving.")
 

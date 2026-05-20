@@ -1,5 +1,7 @@
 from airflow import DAG
 from airflow.operators.trigger_dagrun import TriggerDagRunOperator
+from airflow.models.param import Param
+
 import pendulum
 from datetime import datetime, timedelta
 
@@ -41,12 +43,19 @@ with DAG(
     default_args=default_args,
     description='DAG to ingest data from various sources',
     schedule=None,
-    catchup=False
+    catchup=False,
+    params={
+        "backfill": Param(
+            False, 
+            type="boolean", 
+            description="Run backfill?."
+        )
+    }
 ) as ingest_dag:
     
     # Define tasks
-    ingest_traffic_accident_data = traffic_accident()
-    insert_weather_data = weather_ingest()
+    ingest_traffic_accident_data = traffic_accident(backfill="{{ params.backfill }}")
+    insert_weather_data = weather_ingest(backfill="{{ params.backfill }}")
     insert_osm_data = osm_ingest()
 
     trigger_clean = TriggerDagRunOperator(
